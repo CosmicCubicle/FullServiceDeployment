@@ -985,7 +985,11 @@
       "name": "SecondaryDomainControllerVM",
       "apiVersion": "2015-01-01",
       "dependsOn": [
-        "[variables('NetworkName')]"
+        "[resourceId('Microsoft.Storage/storageAccounts',variables('SecondaryDCStorage'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('SecondaryDCNicName'))]",
+        "[resourceId('Microsoft.Compute/availabilitySets', variables('AvailabilitySetName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts',variables('PrimaryDCStorage'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]"
       ],
       "properties": {
         "mode": "Incremental",
