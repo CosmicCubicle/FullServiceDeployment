@@ -766,7 +766,7 @@
     "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]",
 
     "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
-    "VaultName": "Keys",
+    "VaultName": "[concat(parameters('CompanyID'),'Vault', uniqueString(resourceGroup().id))]",
     "DomainSecret": "DomainAdminPassword",
     "ServerSecret": "ServerAdminPassword",
     "VaultID": "[resourceId('Microsoft.KeyVault/vaults', variables('VaultName'))]",
@@ -950,13 +950,12 @@
         "[resourceId('Microsoft.Network/networkInterfaces',variables('SecondaryDCNicName'))]",
         "[resourceId('Microsoft.Compute/availabilitySets', variables('AvailabilitySetName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts',variables('PrimaryDCStorage'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]",
-        "[variables('VaultName')]"
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]"
       ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('TemplateURI'),'parent/PrimaryDCVM.json')]",
+          "uri": "[concat(variables('TemplateURI'),'child/PrimaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -991,7 +990,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('TemplateURI'),'parent/SecondaryDCVM.json')]",
+          "uri": "[concat(variables('TemplateURI'),'child/SecondaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
