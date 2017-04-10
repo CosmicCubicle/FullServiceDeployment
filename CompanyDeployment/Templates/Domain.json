@@ -955,7 +955,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('TemplateURI'),'child/PrimaryDCVM.json')]",
+          "uri": "[concat(variables('TemplateURI'),'Child/PrimaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -985,16 +985,12 @@
       "name": "SecondaryDomainControllerVM",
       "apiVersion": "2015-01-01",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts',variables('SecondaryDCStorage'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces',variables('SecondaryDCNicName'))]",
-        "[resourceId('Microsoft.Compute/availabilitySets', variables('AvailabilitySetName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts',variables('PrimaryDCStorage'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]"
+        "[concat(variables('NetworkName'),'Update')]"
       ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('TemplateURI'),'child/SecondaryDCVM.json')]",
+          "uri": "[concat(variables('TemplateURI'),'Child/SecondaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
