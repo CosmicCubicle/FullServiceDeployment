@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|AnyCPU">
+      <Configuration>Debug</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|AnyCPU">
+      <Configuration>Release</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>39adba98-56cf-4e1c-ba56-b440215e4062</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworkIdentifier>Deployment</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>1.0</TargetFrameworkVersion>
+    <PrepareForBuildDependsOn>
+    </PrepareForBuildDependsOn>
+  </PropertyGroup>
+  <Import Condition=" Exists('Deployment.targets') " Project="Deployment.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  <!-- vertag<:>start tokens<:>maj.min -->
+  <Import Condition=" Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Deployment\1.1\DeploymentProject.targets') " Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Deployment\1.1\DeploymentProject.targets" />
+  <!-- vertag<:>end -->
+  <ItemGroup>
+    <None Include="Deployment.targets">
+      <Visible>False</Visible>
+    </None>
+    <None Include="DSC\CreateADBDC.ps1.zip" />
+    <None Include="DSC\CreateADPDC.ps1.zip" />
+    <None Include="Parameters\BackEndServer.parameters.json" />
+    <None Include="Parameters\Domain.parameters.json" />
+    <None Include="Parameters\HAPServer.parameters.json" />
+    <None Include="Parameters\JumpBox.parameters.json" />
+    <None Include="Parameters\Network.parameters.json" />
+    <None Include="Parameters\NetworkSecurity.parameters.json" />
+    <None Include="Parameters\SearchServer.parameters.json" />
+    <None Include="Parameters\SQLServer.parameters.json" />
+    <None Include="Parameters\WebServer.parameters.json" />
+    <None Include="Scripts\Deploy.ps1" />
+    <None Include="Scripts\KeyVaultSetup.ps1" />
+    <None Include="Scripts\ManageSub.ps1" />
+    <None Include="Templates\Child\LinuxSingleVM.json" />
+    <None Include="Templates\Child\NicPrivate.json" />
+    <None Include="Templates\Child\NicPublic.json" />
+    <None Include="Templates\Child\SecondaryDCVM.json" />
+    <None Include="Templates\Child\SupportResourcesSingle.json" />
+    <None Include="Templates\Child\SupportResourcesMulti.json" />
+    <None Include="Templates\Child\LinuxMultiVM.json" />
+    <None Include="Templates\Child\PrimaryDCVM.json" />
+    <None Include="Templates\Child\WindowsSingleVM.json" />
+    <None Include="Templates\Child\WindowsMultiVM.json" />
+    <None Include="Templates\Domain.json" />
+    <None Include="Templates\Network.json" />
+    <None Include="Templates\NetworkSecurity.json" />
+    <None Include="Templates\Parent\BackEndServer.json" />
+    <None Include="Templates\Parent\HAPServer.json" />
+    <None Include="Templates\Parent\JumpBox.json" />
+    <None Include="Templates\Parent\SearchServer.json" />
+    <None Include="Templates\Parent\SQLServer.json" />
+    <None Include="Templates\Parent\WebServer.json" />
+  </ItemGroup>
+  <Target Name="GetReferenceAssemblyPaths" />
+</Project>

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "type": "string",
+      "metadata": {
+        "description": "Code used in all naming conventions for deployment.  If this is a deployment to an existing Resource Group make sure to use the same ID as the original deployment."
+      },
+      "maxLength": 6
+    },
+    "NicName": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "Region": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "NetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "Subnet": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    }
+  },
+
+  "variables": {
+    "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', Parameters('NetworkName'))]",
+    "SubNetID": "[concat(variables('VnetID'),'/subnets/',parameters('Subnet'))]"
+  },
+
+  "resources": [
+    {
+      "name": "[parameters('NicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('Region')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('SubNetID')]"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

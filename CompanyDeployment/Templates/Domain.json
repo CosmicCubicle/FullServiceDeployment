@@ -1,0 +1,1050 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "type": "string",
+      "metadata": {
+        "description": "Code used in all naming conventions for deployment.  If this is a deployment to an existing Resource Group make sure to use the same ID as the original deployment."
+      },
+      "maxLength": 6
+    },
+    "EnvironmentType": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "NetworkPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The first 3 octets of the network space."
+      }
+    },
+    "MachineClass": {
+      "type": "string",
+      "defaultValue": "Standard_DS1_v2",
+      "metadata": {
+        "description": "The size of the Azure Virtual Machines."
+      }
+    },
+    "DomainName": {
+      "type": "string",
+      "defaultValue": "Contoso.com",
+      "metadata": {
+        "description": "Name of the Domain to create."
+      }
+    },
+    "DataDiskP10": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "DataDiskP20": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 512GB P20 Disks."
+      }
+    },
+    "DataDiskP30": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 1024GB P30 Disks."
+      }
+    },
+    "InstanceCount": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The number of instances of resources"
+      }
+    },
+    "SingleMulti": {
+      "type": "string",
+      "defaultValue": "Multi",
+      "allowedValues": [
+        "Multi",
+        "Single"
+      ],
+      "metadata": {
+        "description": "Flag for invoking single or multi VM child templates"
+      }
+    }
+  },
+
+  "variables": {
+    "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
+    "VaultName": "Keys",
+    "DomainSecret": "DomainAdminPassword",
+    "ServerSecret": "ServerAdminPassword",
+    "VaultID": "/subscriptions/c9cec4b6-1710-49af-9609-b48272281fff/resourceGroups/rgKeys/providers/Microsoft.KeyVault/vaults/",
+    "NetworkPrefix": "vnet",
+    "NetworkName": "[concat(variables('NetworkPrefix'), parameters('CompanyID'))]",
+    "Region": "[resourceGroup().location]",
+    "NetworkAddressSpace": "[concat(parameters('NetworkPrefix'),'.0/24')]",
+    "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('NetworkName'))]",
+    "DomainID": "[concat(variables('VnetID'),'/subnets/subDC')]",
+    "adSubnetRef": "[concat(variables('VnetID'),'/subnets/',variables('DomainSubNet'))]",
+    "StoragePrefix": "stor",
+    "CompanyIdLower": "[ToLower(parameters('CompanyID'))]",
+    "PrimaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc01')]",
+    "SecondaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc02')]",
+    "OSDiskSize": 127,
+    "AssetLocation": "https://storarmtemplates.blob.core.windows.net/dsc/",
+    "PrimaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADPDC.ps1.zip')]",
+    "PrimaryDCConfigurationFunction": "createadpdc.ps1\\CreateADPDC",
+    "SecondaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADBDC.ps1.zip')]",
+    "SecondaryDCConfigurationFunction": "createadbdc.ps1\\CreateADBDC",
+    "P10Size": 128,
+    "P20Size": 512,
+    "P30Size": 1023,
+    "SysVolName": "SysVol",
+    "AvailabilityPrefix": "avail",
+    "AvailabilitySetName": "[concat(variables('AvailabilityPrefix'), parameters('CompanyID'), 'DC')]",
+    "NicPrefix": "nic",
+    "PrimaryDCNicName": "[concat(variables('NicPrefix'), parameters('CompanyID'), 'DC01')]",
+    "SecondaryDCNicName": "[concat(variables('NicPrefix'), parameters('CompanyID'), 'DC02')]",
+    "PrimaryDCIP": "[concat(parameters('NetworkPrefix'), '.4')]",
+    "SecondaryDCIP": "[concat(parameters('NetworkPrefix'), '.5')]",
+    "VMPrefix": "vm",
+    "PrimaryDCVMName": "[concat(variables('VMPrefix'), parameters('CompanyID'), 'DC01')]",
+    "SecondaryDCVMName": "[concat(variables('VMPrefix'), parameters('CompanyID'), 'DC02')]",
+    "PrimaryDCPCName": "[concat(parameters('CompanyID'),parameters('EnvironmentType'), '-DC01')]",
+    "SecondaryDCPCName": "[concat(parameters('CompanyID'),parameters('EnvironmentType'), '-DC02')]",
+    "ImagePublisher": "MicrosoftWindowsServer",
+    "ImageOffer": "WindowsServer",
+    "ImageSKU": "2012-R2-Datacenter",
+    "ImageVersion": "latest",
+    "p10diskArrayPDC": [
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','0')]",
+        "lun": 0,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','1')]",
+        "lun": 1,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','2')]",
+        "lun": 2,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','3')]",
+        "lun": 3,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','4')]",
+        "lun": 4,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','5')]",
+        "lun": 5,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','6')]",
+        "lun": 6,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','7')]",
+        "lun": 7,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','8')]",
+        "lun": 8,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','9')]",
+        "lun": 9,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      }
+    ],
+    "p20diskArrayPDC": [
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk','0')]",
+        "lun": 20,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',21)]",
+        "lun": 21,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',22)]",
+        "lun": 22,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',23)]",
+        "lun": 23,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',24)]",
+        "lun": 24,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',25)]",
+        "lun": 25,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',26)]",
+        "lun": 26,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',27)]",
+        "lun": 27,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',28)]",
+        "lun": 28,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p20','Disk',29)]",
+        "lun": 29,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      }
+    ],
+    "p30diskArrayPDC": [
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',40)]",
+        "lun": 40,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',41)]",
+        "lun": 41,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',42)]",
+        "lun": 42,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',43)]",
+        "lun": 43,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',44)]",
+        "lun": 44,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',45)]",
+        "lun": 45,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',46)]",
+        "lun": 46,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',47)]",
+        "lun": 47,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',48)]",
+        "lun": 48,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('PrimaryDCVMName'),'p30','Disk',49)]",
+        "lun": 49,
+        "vhd": {
+          "uri": "[concat('http://', variables('PrimaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      }
+    ],
+    "p10diskArrayBDC": [
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',0)]",
+        "lun": 0,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',1)]",
+        "lun": 1,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',2)]",
+        "lun": 2,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',3)]",
+        "lun": 3,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',4)]",
+        "lun": 4,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',5)]",
+        "lun": 5,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',6)]",
+        "lun": 6,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',7)]",
+        "lun": 7,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',8)]",
+        "lun": 8,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p10','Disk',9)]",
+        "lun": 9,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p10', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      }
+    ],
+    "p20diskArrayBDC": [
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',0)]",
+        "lun": 20,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',21)]",
+        "lun": 21,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',22)]",
+        "lun": 22,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',23)]",
+        "lun": 23,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',24)]",
+        "lun": 24,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',25)]",
+        "lun": 25,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',26)]",
+        "lun": 26,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',27)]",
+        "lun": 27,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',28)]",
+        "lun": 28,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p20','Disk',29)]",
+        "lun": 29,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p20', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      }
+    ],
+    "p30diskArrayBDC": [
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',40)]",
+        "lun": 40,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',41)]",
+        "lun": 41,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',42)]",
+        "lun": 42,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',43)]",
+        "lun": 43,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',44)]",
+        "lun": 44,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',45)]",
+        "lun": 45,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',46)]",
+        "lun": 46,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',47)]",
+        "lun": 47,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',48)]",
+        "lun": 48,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(variables('SecondaryDCVMName'),'p30','Disk',49)]",
+        "lun": 49,
+        "vhd": {
+          "uri": "[concat('http://', variables('SecondaryDCStorage'),'.blob.core.windows.net/vhds/', 'p30', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      }
+    ],
+    "PDCdisks": "[concat(take(variables('p10DiskArrayPDC'),parameters('DataDiskp10')),take(variables('p20DiskArrayPDC'),parameters('DataDiskp20')),take(variables('p30DiskArrayPDC'),parameters('DataDiskp30'))) ]",
+    "BDCdisks": "[concat(take(variables('p10DiskArrayBDC'),parameters('DataDiskp10')),take(variables('p20DiskArrayBDC'),parameters('DataDiskp20')),take(variables('p30DiskArrayBDC'),parameters('DataDiskp30'))) ]",
+    "P10Caching": "None",
+    "P20Caching": "None",
+    "P30Caching": "None",
+    "StorageType": "Standard_LRS",
+    "DomainSubNet": "[concat(parameters('NetworkPrefix'),'.0/28')]",
+    "DMZSubNet": "[concat(parameters('NetworkPrefix'),'.32/27')]",
+    "WebSubNet": "[concat(parameters('NetworkPrefix'),'.64/27')]",
+    "DataBaseSubNet": "[concat(parameters('NetworkPrefix'),'.96/27')]",
+    "SearchSubNet": "[concat(parameters('NetworkPrefix'),'.128/27')]",
+    "JumpSubNet": "[concat(parameters('NetworkPrefix'),'.160/28')]",
+    "GateWaySubnet": "[concat(parameters('NetworkPrefix'),'.240/28')]",
+    "NetworkSecurityPrefix": "nsg",
+    "DMZSecurity": "[concat(variables('NetworkSecurityPrefix'),'DMZ')]",
+    "JumpSecurity": "[concat(variables('NetworkSecurityPrefix'),'Jump')]",
+    "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('NetworkName')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('NetworkAddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "subDC",
+            "properties": {
+              "addressPrefix": "[variables('DomainSubNet')]"
+            }
+          },
+          {
+            "name": "subDMZ",
+            "properties": {
+              "addressPrefix": "[variables('DMZSubNet')]"
+            }
+          },
+          {
+            "name": "subWeb",
+            "properties": {
+              "addressPrefix": "[variables('WebSubNet')]"
+            }
+          },
+          {
+            "name": "subDB",
+            "properties": {
+              "addressPrefix": "[variables('DataBaseSubNet')]"
+            }
+          },
+          {
+            "name": "subSearch",
+            "properties": {
+              "addressPrefix": "[variables('SearchSubNet')]"
+            }
+          },
+          {
+            "name": "subJump",
+            "properties": {
+              "addressPrefix": "[variables('JumpSubNet')]"
+            }
+          },
+          {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "[variables('GateWaySubnet')]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [ ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('PrimaryDCStorage')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[variables('Region')]",
+      "properties": {
+        "accountType": "[variables('StorageType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('SecondaryDCStorage')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[variables('Region')]",
+      "properties": {
+        "accountType": "[variables('StorageType')]"
+      }
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('AvailabilitySetName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('Region')]"
+    },
+    {
+      "name": "[variables('PrimaryDCNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[variables('Region')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[variables('NetworkName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('PrimaryDCIP')]",
+              "subnet": {
+                "id": "[variables('DomainID')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('SecondaryDCNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[variables('Region')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[variables('NetworkName')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('SecondaryDCIP')]",
+              "subnet": {
+                "id": "[variables('DomainID')]"
+              }
+
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "PrimaryDomainControllerVM",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts',variables('SecondaryDCStorage'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('SecondaryDCNicName'))]",
+        "[resourceId('Microsoft.Compute/availabilitySets', variables('AvailabilitySetName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts',variables('PrimaryDCStorage'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "http://storarmtemplates.blob.core.windows.net/templates/PrimaryDCVM.json",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Region": { "value": "[variables('Region')]" },
+          "PrimaryDCNicName": { "value": "[concat(variables('PrimaryDCNicName'))]" },
+          "DomainPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+              },
+              "secretName": "[variables('DomainSecret')]"
+            }
+          },
+          "PrimaryDCVMName": { "value": "[variables('PrimaryDCVMName')]" },
+          "PrimaryDCPCName": { "value": "[variables('PrimaryDCPCName')]" },
+          "MachineClass": { "value": "[parameters('MachineClass')]" },
+          "DataDiskP10": { "value": "[parameters('DataDiskP10')]" },
+          "DataDiskP20": { "value": "[parameters('DataDiskP20')]" },
+          "DataDiskP30": { "value": "[parameters('DataDiskP30')]" },
+          "ImageSKU": { "value": "[variables('ImageSKU')]" },
+          "ImageVersion": { "value": "[variables('ImageVersion')]" },
+          "ImagePublisher": { "value": "[variables('ImagePublisher')]" },
+          "ImageOffer": { "value": "[variables('ImageOffer')]" },
+          "AdminUserName": { "value": "[variables('AdminUserName')]" },
+          "PrimaryDCStorageName": { "value": "[variables('PrimaryDCStorage')]" },
+          "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
+          "DomainName": { "value": "[parameters('DomainName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "SecondaryDomainControllerVM",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[variables('NetworkName')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "http://storarmtemplates.blob.core.windows.net/templates/SecondaryDCVM.json",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Region": { "value": "[variables('Region')]" },
+          "SecondaryDCNicName": { "value": "[concat(variables('SecondaryDCNicName'))]" },
+          "DomainPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+              },
+              "secretName": "[variables('DomainSecret')]"
+            }
+          },
+          "SecondaryDCVMName": { "value": "[variables('SecondaryDCVMName')]" },
+          "SecondaryDCPCName": { "value": "[variables('SecondaryDCPCName')]" },
+          "MachineClass": { "value": "[parameters('MachineClass')]" },
+          "DataDiskP10": { "value": "[parameters('DataDiskP10')]" },
+          "DataDiskP20": { "value": "[parameters('DataDiskP20')]" },
+          "DataDiskP30": { "value": "[parameters('DataDiskP30')]" },
+          "ImageSKU": { "value": "[variables('ImageSKU')]" },
+          "ImageVersion": { "value": "[variables('ImageVersion')]" },
+          "ImagePublisher": { "value": "[variables('ImagePublisher')]" },
+          "ImageOffer": { "value": "[variables('ImageOffer')]" },
+          "AdminUserName": { "value": "[variables('AdminUserName')]" },
+          "SecondaryDCStorageName": { "value": "[variables('SecondaryDCStorage')]" },
+          "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
+          "DomainName": { "value": "[parameters('DomainName')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[concat(variables('NetworkName'),'Update')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "dependsOn": [
+        "PrimaryDomainControllerVM"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('NetworkAddressSpace')]"
+          ]
+        },
+        "dhcpOptions": {
+          "dnsServers": [
+            "[variables('PrimaryDCIP')]",
+            "[variables('SecondaryDCIP')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "subDC",
+            "properties": {
+              "addressPrefix": "[variables('DomainSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subDMZ",
+            "properties": {
+              "addressPrefix": "[variables('DMZSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('DMZSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subWeb",
+            "properties": {
+              "addressPrefix": "[variables('WebSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subDB",
+            "properties": {
+              "addressPrefix": "[variables('DataBaseSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subSearch",
+            "properties": {
+              "addressPrefix": "[variables('SearchSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subJump",
+            "properties": {
+              "addressPrefix": "[variables('JumpSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('JumpSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "[variables('GateWaySubnet')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,490 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ServerPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password used for Servers and Domain join"
+      }
+    },
+    "DomainPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password used for DCs and Domain join"
+      }
+    },
+    "VMName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the VM Object"
+      }
+    },
+    "PCName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of PC"
+      }
+    },
+    "MachineClass": {
+      "type": "string",
+      "defaultValue": "Standard_DS1_v2",
+      "metadata": {
+        "description": "The size of the Azure Virtual Machines"
+      }
+    },
+    "DataDiskP10": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "The number of 128GB P10 Disks"
+      }
+    },
+    "DataDiskP20": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The number of 512GB P20 Disks"
+      }
+    },
+    "DataDiskP30": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "The number of 1024GB P30 Disks"
+      }
+    },
+    "ImageSKU": {
+      "type": "string",
+      "metadata": {
+        "description": "OS Image SKU"
+      }
+    },
+    "ImageVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "OS Image Version"
+      }
+    },
+    "ImagePublisher": {
+      "type": "string",
+      "metadata": {
+        "description": "OS Image Publisher"
+      }
+    },
+    "ImageOffer": {
+      "type": "string",
+      "metadata": {
+        "description": "OS Image Offer"
+      }
+    },
+    "Region": {
+      "type": "string",
+      "metadata": {
+        "description": "Region to create resource in"
+      }
+    },
+    "AdminUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "User Name for the VMs"
+      }
+    },
+    "StorageName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage Account name string"
+      }
+    },
+    "NicName": {
+      "type": "string",
+      "metadata": {
+        "description": "Network interface string"
+      }
+    },
+    "AvailabilitySetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Availability Set name"
+      }
+    },
+    "DomainUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "Domain admin user name"
+      }
+    },
+    "DomainName": {
+      "type": "string",
+      "metadata": {
+        "description": "name of AD domain"
+      }
+    }
+  },
+
+  "variables": {
+    "OSDiskSize": 127,
+    "P10Size": 128,
+    "P20Size": 512,
+    "P30Size": 1023,
+    "p10diskArray": [
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','0')]",
+        "lun": 0,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','1')]",
+        "lun": 1,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','2')]",
+        "lun": 2,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','3')]",
+        "lun": 3,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','4')]",
+        "lun": 4,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','5')]",
+        "lun": 5,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','6')]",
+        "lun": 6,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','7')]",
+        "lun": 7,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','8')]",
+        "lun": 8,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p10','Disk','9')]",
+        "lun": 9,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p10', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p10Size')]"
+      }
+    ],
+    "p20diskArray": [
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk','0')]",
+        "lun": 20,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',21)]",
+        "lun": 21,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',22)]",
+        "lun": 22,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',23)]",
+        "lun": 23,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',24)]",
+        "lun": 24,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',25)]",
+        "lun": 25,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',26)]",
+        "lun": 26,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',27)]",
+        "lun": 27,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',28)]",
+        "lun": 28,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p20','Disk',29)]",
+        "lun": 29,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p20', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p20Size')]"
+      }
+    ],
+    "p30diskArray": [
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',40)]",
+        "lun": 40,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk0.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',41)]",
+        "lun": 41,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk1.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',42)]",
+        "lun": 42,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk2.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',43)]",
+        "lun": 43,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk3.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',44)]",
+        "lun": 44,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk4.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',45)]",
+        "lun": 45,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk5.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',46)]",
+        "lun": 46,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk6.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',47)]",
+        "lun": 47,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk7.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',48)]",
+        "lun": 48,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk8.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      },
+      {
+        "name": "[concat(parameters('VMName'),'p30','Disk',49)]",
+        "lun": 49,
+        "vhd": {
+          "uri": "[concat('http://', parameters('StorageName'),'.blob.core.windows.net/vhds/', 'p30', 'Disk9.vhd')]"
+        },
+        "createOption": "Empty",
+        "caching": "None",
+        "diskSizeGB": "[variables('p30Size')]"
+      }
+    ],
+    "Disks": "[concat(take(variables('p10DiskArray'),parameters('DataDiskp10')),take(variables('p20DiskArray'),parameters('DataDiskp20')),take(variables('p30DiskArray'),parameters('DataDiskp30'))) ]",
+    "P10Caching": "None",
+    "P20Caching": "None",
+    "P30Caching": "None",
+    "DomainJoinOptions": "3"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('VMName')]",
+      "location": "[parameters('Region')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('MachineClass')]"
+        },
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('AvailabilitySetName'))]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('PCName')]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('ServerPassword')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": false
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[parameters('ImagePublisher')]",
+            "offer": "[parameters('ImageOffer')]",
+            "sku": "[parameters('ImageSKU')]",
+            "version": "[parameters('ImageVersion')]"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat('http://',parameters('StorageName'),'.blob.core.windows.net/vhds/',parameters('VMName'),'osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+          "dataDisks": "[variables('Disks')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('NicName'))]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+﻿{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "value": "JeradZ"
+    },
+    "DomainPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/63337a13-68cf-465c-a734-4ce8ca7e1137/resourceGroups/KeyVaultResourceGroup/providers/Microsoft.KeyVault/vaults/VaultJerad"
+        },
+        "secretName": "DomainAdminPassword"
+      }
+    },
+    "NetworkPrefix": {
+      "value": "10.10.10"
+    },
+    "MachineClass": {
+      "value": "Standard_DS1_v2"
+    },
+    "EnvironmentType": {
+      "value": "p"
+    },
+    "DataDiskP10": {
+      "value": 1
+    },
+    "DataDiskP20": {
+      "value": 0
+    },
+    "DataDiskP30": {
+      "value": 0
+    }
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "type": "string",
+      "metadata": {
+        "description": "Code used in all naming conventions for deployment.  If this is a deployment to an existing Resource Group make sure to use the same ID as the original deployment."
+      },
+      "maxLength": 6
+    },
+    "EnvironmentType": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "NetworkPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The first 3 octets of the network space."
+      }
+    },
+    "MachineClass": {
+      "type": "string",
+      "defaultValue": "Standard_DS1_v2",
+      "metadata": {
+        "description": "The size of the Azure Virtual Machines."
+      }
+    },
+    "DomainName": {
+      "type": "string",
+      "defaultValue": "Contoso.com",
+      "metadata": {
+        "description": "Name of the Domain to create."
+      }
+    },
+    "DataDiskP10": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "DataDiskP20": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 512GB P20 Disks."
+      }
+    },
+    "DataDiskP30": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 1024GB P30 Disks."
+      }
+    },
+    "InstanceCount": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The number of instances of resources"
+      }
+    },
+    "SingleMulti": {
+      "type": "string",
+      "defaultValue": "Multi",
+      "allowedValues": [
+        "Multi",
+        "Single"
+      ],
+      "metadata": {
+        "description": "Flag for invoking single or multi VM child templates"
+      }
+    }
+  },
+
+  "variables": {
+    "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
+    "VaultName": "Keys",
+    "DomainSecret": "DomainAdminPassword",
+    "ServerSecret": "ServerAdminPassword",
+    "VaultID": "/subscriptions/c9cec4b6-1710-49af-9609-b48272281fff/resourceGroups/rgKeys/providers/Microsoft.KeyVault/vaults/",
+    "NetworkPrefix": "vnet",
+    "NetworkName": "[concat(variables('NetworkPrefix'), parameters('CompanyID'))]",
+    "Region": "[resourceGroup().location]",
+    "SubNet": "subWeb",
+    "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('NetworkName'))]",
+    "SubnetID": "[concat(variables('VnetID'),'/subnets/subWeb')]",
+    "DomainPrefix": "ad",
+    "DomainName": "[concat(parameters('CompanyID'),'.hosted')]",
+    "StoragePrefix": "stor",
+    "CompanyIdLower": "[ToLower(parameters('CompanyID'))]",
+    "StorageName": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'), parameters('EnvironmentType'), 'be')]",
+    "StorageType": "Standard_LRS",
+    "AvailabilityPrefix": "avail",
+    "AvailabilitySetName": "[concat(variables('AvailabilityPrefix'), parameters('CompanyID'), parameters('EnvironmentType'), 'BE')]",
+    "NicPrefix": "nic",
+    "NicName": "[concat(variables('NicPrefix'), parameters('CompanyID'), parameters('EnvironmentType'), 'BE')]",
+    "VMPrefix": "vm",
+    "VMName": "[concat(variables('VMPrefix'), parameters('CompanyID'), parameters('EnvironmentType'), 'BE')]",
+    "PCName": "[concat(parameters('CompanyID'),parameters('EnvironmentType'), '-BE')]",
+    "ImagePublisher": "MicrosoftWindowsServer",
+    "ImageOffer": "WindowsServer",
+    "ImageSKU": "2012-R2-Datacenter",
+    "ImageVersion": "latest",
+    "DomainJoinOptions": "3",
+    "DomainUserName": "[concat(variables('DomainName'),'\\', variables('AdminUserName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "SupportResourcesDeployment",
+      "apiVersion": "2015-01-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat('http://storarmtemplates.blob.core.windows.net/templates/SupportResources',parameters('SingleMulti'),'.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Region": { "value": "[variables('Region')]" },
+          "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
+          "StorageName": { "value": "[variables('StorageName')]" },
+          "StorageType": { "value": "[variables('StorageType')]" },
+          "InstanceCount": { "value": "[parameters('InstanceCount')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('NicDeploymentTemplate',copyIndex(1))]",
+      "apiVersion": "2015-01-01",
+      "copy": {
+        "name": "NicDeployment",
+        "count": "[parameters('InstanceCount')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "http://storarmtemplates.blob.core.windows.net/templates/NicPrivate.json",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Region": { "value": "[variables('Region')]" },
+          "CompanyID": { "value": "[parameters('CompanyID')]" },
+          "NetworkName": { "value": "[variables('NetworkName')]" },
+          "NicName": { "value": "[concat(variables('NicName'),copyIndex(1))]" },
+          "Subnet": { "value": "[variables('SubNet')]" }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('ServerDeployment',copyIndex(1))]",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/SupportResourcesDeployment",
+        "NicDeployment"
+      ],
+      "copy": {
+        "name": "ServerDeployment",
+        "count": "[parameters('InstanceCount')]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat('http://storarmtemplates.blob.core.windows.net/templates/Windows',parameters('SingleMulti'),'VM.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Region": { "value": "[variables('Region')]" },
+          "NicName": { "value": "[concat(variables('NicName'), copyIndex(1))]" },
+          "DomainPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+              },
+              "secretName": "[variables('DomainSecret')]"
+            }
+          },
+          "ServerPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+              },
+              "secretName": "[variables('ServerSecret')]"
+            }
+          },
+          "VMName": { "value": "[concat(variables('VMName'),copyIndex(1))]" },
+          "PCName": { "value": "[concat(variables('PCName'),copyIndex(1))]" },
+          "MachineClass": { "value": "[parameters('MachineClass')]" },
+          "DataDiskP10": { "value": "[parameters('DataDiskP10')]" },
+          "DataDiskP20": { "value": "[parameters('DataDiskP20')]" },
+          "DataDiskP30": { "value": "[parameters('DataDiskP30')]" },
+          "ImageSKU": { "value": "[variables('ImageSKU')]" },
+          "ImageVersion": { "value": "[variables('ImageVersion')]" },
+          "ImagePublisher": { "value": "[variables('ImagePublisher')]" },
+          "ImageOffer": { "value": "[variables('ImageOffer')]" },
+          "AdminUserName": { "value": "[variables('AdminUserName')]" },
+          "StorageName": { "value": "[concat(variables('StorageName'),copyIndex(1))]" },
+          "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
+          "DomainUserName": { "value": "[variables('DomainUserName')]" },
+          "DomainName": { "value": "[parameters('DomainName')]" }
+        }
+        }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+﻿{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "value": "JeradX"
+    },
+    "ServerPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/ccd83f93-c67a-4118-bf1b-6a366f35e0f2/resourceGroups/rgCosmicKeys/providers/Microsoft.KeyVault/vaultsAutoVault"
+        },
+        "secretName": "ServerAdminPassword"
+      }
+    },
+    "NetworkPrefix": {
+      "value": "10.10.10"
+    },
+    "MachineClass": {
+      "value": "Standard_DS2_v2"
+    },
+    "EnvironmentType": {
+      "value": "p"
+    },
+    "DataDiskP10": {
+      "value": 0
+    },
+    "DataDiskP20": {
+      "value": 0
+    },
+    "DataDiskP30": {
+      "value": 0
+    }
+  }
+}

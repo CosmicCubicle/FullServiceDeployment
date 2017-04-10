@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Region": {
+      "type": "string",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "AvailabilitySetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "StorageName": {
+      "type": "string",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "StorageType": {
+      "type": "string",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "InstanceCount": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    }
+  },
+  "variables": {
+
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[concat(parameters('StorageName'),'1')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[parameters('Region')]",
+      "properties": {
+        "accountType": "[parameters('StorageType')]"
+      }
+    }
+  ]
+}

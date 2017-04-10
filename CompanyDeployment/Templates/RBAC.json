@@ -1,0 +1,388 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+  "parameters": {
+    "CompanyID": {
+      "type": "string",
+      "metadata": {
+        "description": "Code used in all naming conventions for deployment.  If this is a deployment to an existing Resource Group make sure to use the same ID as the original deployment."
+      },
+      "maxLength": 6
+    },
+    "EnvironmentType": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix of environment"
+      }
+    },
+    "NetworkPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The first 3 octets of the network space."
+      }
+    },
+    "MachineClass": {
+      "type": "string",
+      "defaultValue": "Standard_DS1_v2",
+      "metadata": {
+        "description": "The size of the Azure Virtual Machines."
+      }
+    },
+    "DomainName": {
+      "type": "string",
+      "defaultValue": "Contoso.com",
+      "metadata": {
+        "description": "Name of the Domain to create."
+      }
+    },
+    "DataDiskP10": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 128GB P10 Disks."
+      }
+    },
+    "DataDiskP20": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 512GB P20 Disks."
+      }
+    },
+    "DataDiskP30": {
+      "type": "int",
+      "metadata": {
+        "description": "The number of 1024GB P30 Disks."
+      }
+    },
+    "InstanceCount": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The number of instances of resources"
+      }
+    },
+    "SingleMulti": {
+      "type": "string",
+      "defaultValue": "Multi",
+      "allowedValues": [
+        "Multi",
+        "Single"
+      ],
+      "metadata": {
+        "description": "Flag for invoking single or multi VM child templates"
+      }
+    }
+  },
+  "variables": {
+    "NetworkPrefix": "vnet",
+    "NetworkName": "[concat(variables('NetworkPrefix'), parameters('CompanyID'))]",
+    "Region": "[resourceGroup().location]",
+    "NetworkAddressSpace": "[concat(parameters('NetworkPrefix'),'.0/24')]",
+    "DomainSubNet": "[concat(parameters('NetworkPrefix'),'.0/28')]",
+    "DMZSubNet": "[concat(parameters('NetworkPrefix'),'.32/27')]",
+    "WebSubNet": "[concat(parameters('NetworkPrefix'),'.64/27')]",
+    "DataBaseSubNet": "[concat(parameters('NetworkPrefix'),'.96/27')]",
+    "SearchSubNet": "[concat(parameters('NetworkPrefix'),'.128/27')]",
+    "JumpSubNet": "[concat(parameters('NetworkPrefix'),'.160/28')]",
+    "GateWaySubnet": "[concat(parameters('NetworkPrefix'),'.240/28')]",
+    "NetworkSecurityPrefix": "nsg",
+    "DMZSecurity": "[concat(variables('NetworkSecurityPrefix'),'DMZ')]",
+    "JumpSecurity": "[concat(variables('NetworkSecurityPrefix'),'Jump')]",
+    "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('DMZSecurity')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Deny",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 500,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "HTTP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "80",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "[variables('DMZSubNet')]",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "HTTPS",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "443",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "[variables('DMZSubNet')]",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "SSH",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "22",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "[variables('JumpSubNet')]",
+              "destinationAddressPrefix": "[variables('DMZSubNet')]",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "HAProxy",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "1936",
+              "destinationPortRange": "1936",
+              "sourceAddressPrefix": "[variables('JumpSubNet')]",
+              "destinationAddressPrefix": "[variables('DMZSubNet')]",
+              "access": "Allow",
+              "priority": 490,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      },
+      "dependsOn": [ ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('JumpSecurity')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Deny",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 500,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "RDP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "3389",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "[variables('JumpSubNet')]",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('InternalSecurity')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Deny",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 500,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ALL-Domain",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[variables('DomainSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ALL-Jump",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[variables('JumpSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 140,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ALL-Web",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[variables('WebSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ALL-DataBase",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[variables('DataBaseSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ALL-Search",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[variables('SearchSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 130,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "RDP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "3389",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[variables('JumpSubNet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 150,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      },
+      "dependsOn": [ ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('NetworkName')]",
+      "apiVersion": "2016-03-30",
+      "location": "[variables('Region')]",
+      "dependsOn": [
+        "[variables('DMZSecurity')]",
+        "[variables('JumpSecurity')]",
+        "[variables('InternalSecurity')]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('NetworkAddressSpace')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "subDC",
+            "properties": {
+              "addressPrefix": "[variables('DomainSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subDMZ",
+            "properties": {
+              "addressPrefix": "[variables('DMZSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('DMZSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subWeb",
+            "properties": {
+              "addressPrefix": "[variables('WebSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subDB",
+            "properties": {
+              "addressPrefix": "[variables('DataBaseSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subSearch",
+            "properties": {
+              "addressPrefix": "[variables('SearchSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "subJump",
+            "properties": {
+              "addressPrefix": "[variables('JumpSubNet')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('JumpSecurity'))]"
+              }
+            }
+          },
+          {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "[variables('GateWaySubnet')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+  }
