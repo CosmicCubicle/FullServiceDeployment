@@ -53,7 +53,6 @@
     <None Include="Templates\Child\WindowsSingleVM.json" />
     <None Include="Templates\Child\WindowsMultiVM.json" />
     <None Include="Templates\Domain.json" />
-    <None Include="Templates\Network.json" />
     <None Include="Templates\NetworkSecurity.json" />
     <None Include="Templates\Parent\BackEndServer.json" />
     <None Include="Templates\Parent\HAPServer.json" />

@@ -91,7 +91,7 @@
     "PrimaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc01')]",
     "SecondaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc02')]",
     "OSDiskSize": 127,
-    "AssetLocation": "https://storarmtemplates.blob.core.windows.net/dsc/",
+    "AssetLocation": "https://raw.githubusercontent.com/CosmicCubicle/FullServiceDeployment/master/CompanyDeployment/DSC/",
     "PrimaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADPDC.ps1.zip')]",
     "PrimaryDCConfigurationFunction": "createadpdc.ps1\\CreateADPDC",
     "SecondaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADBDC.ps1.zip')]",
