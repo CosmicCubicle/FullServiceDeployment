@@ -15,6 +15,20 @@
         "description": "Prefix of environment"
       }
     },
+    "DomainSecretValue": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password that will be created int he vault for the Domain Admin Account, must be at least 12 characters."
+      },
+      "minLength": 12
+    },
+    "ServerSecretValue": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password that will be created int he vault for the Local Server Admin Account, must be at least 12 characters."
+      },
+      "minLength": 12
+    },
     "NetworkPrefix": {
       "type": "string",
       "metadata": {
@@ -74,14 +88,10 @@
   },
 
   "variables": {
-    "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
-    "VaultName": "Keys",
-    "DomainSecret": "DomainAdminPassword",
-    "ServerSecret": "ServerAdminPassword",
-    "VaultID": "/subscriptions/c9cec4b6-1710-49af-9609-b48272281fff/resourceGroups/rgKeys/providers/Microsoft.KeyVault/vaults/",
     "NetworkPrefix": "vnet",
     "NetworkName": "[concat(variables('NetworkPrefix'), parameters('CompanyID'))]",
     "Region": "[resourceGroup().location]",
+
     "NetworkAddressSpace": "[concat(parameters('NetworkPrefix'),'.0/24')]",
     "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('NetworkName'))]",
     "DomainID": "[concat(variables('VnetID'),'/subnets/subDC')]",
@@ -91,17 +101,20 @@
     "PrimaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc01')]",
     "SecondaryDCStorage": "[concat(variables('StoragePrefix'), variables('CompanyIDLower'),'dc02')]",
     "OSDiskSize": 127,
+
     "AssetLocation": "https://raw.githubusercontent.com/CosmicCubicle/FullServiceDeployment/master/CompanyDeployment/DSC/",
     "PrimaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADPDC.ps1.zip')]",
     "PrimaryDCConfigurationFunction": "createadpdc.ps1\\CreateADPDC",
     "SecondaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADBDC.ps1.zip')]",
     "SecondaryDCConfigurationFunction": "createadbdc.ps1\\CreateADBDC",
+
     "P10Size": 128,
     "P20Size": 512,
     "P30Size": 1023,
     "SysVolName": "SysVol",
     "AvailabilityPrefix": "avail",
     "AvailabilitySetName": "[concat(variables('AvailabilityPrefix'), parameters('CompanyID'), 'DC')]",
+
     "NicPrefix": "nic",
     "PrimaryDCNicName": "[concat(variables('NicPrefix'), parameters('CompanyID'), 'DC01')]",
     "SecondaryDCNicName": "[concat(variables('NicPrefix'), parameters('CompanyID'), 'DC02')]",
@@ -112,10 +125,12 @@
     "SecondaryDCVMName": "[concat(variables('VMPrefix'), parameters('CompanyID'), 'DC02')]",
     "PrimaryDCPCName": "[concat(parameters('CompanyID'),parameters('EnvironmentType'), '-DC01')]",
     "SecondaryDCPCName": "[concat(parameters('CompanyID'),parameters('EnvironmentType'), '-DC02')]",
+
     "ImagePublisher": "MicrosoftWindowsServer",
     "ImageOffer": "WindowsServer",
     "ImageSKU": "2012-R2-Datacenter",
     "ImageVersion": "latest",
+
     "p10diskArrayPDC": [
       {
         "name": "[concat(variables('PrimaryDCVMName'),'p10','Disk','0')]",
@@ -728,12 +743,14 @@
         "diskSizeGB": "[variables('p30Size')]"
       }
     ],
+
     "PDCdisks": "[concat(take(variables('p10DiskArrayPDC'),parameters('DataDiskp10')),take(variables('p20DiskArrayPDC'),parameters('DataDiskp20')),take(variables('p30DiskArrayPDC'),parameters('DataDiskp30'))) ]",
     "BDCdisks": "[concat(take(variables('p10DiskArrayBDC'),parameters('DataDiskp10')),take(variables('p20DiskArrayBDC'),parameters('DataDiskp20')),take(variables('p30DiskArrayBDC'),parameters('DataDiskp30'))) ]",
     "P10Caching": "None",
     "P20Caching": "None",
     "P30Caching": "None",
     "StorageType": "Standard_LRS",
+
     "DomainSubNet": "[concat(parameters('NetworkPrefix'),'.0/28')]",
     "DMZSubNet": "[concat(parameters('NetworkPrefix'),'.32/27')]",
     "WebSubNet": "[concat(parameters('NetworkPrefix'),'.64/27')]",
@@ -741,12 +758,59 @@
     "SearchSubNet": "[concat(parameters('NetworkPrefix'),'.128/27')]",
     "JumpSubNet": "[concat(parameters('NetworkPrefix'),'.160/28')]",
     "GateWaySubnet": "[concat(parameters('NetworkPrefix'),'.240/28')]",
+
     "NetworkSecurityPrefix": "nsg",
     "DMZSecurity": "[concat(variables('NetworkSecurityPrefix'),'DMZ')]",
     "JumpSecurity": "[concat(variables('NetworkSecurityPrefix'),'Jump')]",
-    "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]"
+    "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]",
+
+    "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
+    "VaultName": "Keys",
+    "DomainSecret": "DomainAdminPassword",
+    "ServerSecret": "ServerAdminPassword",
+    "VaultID": "[resourceId('Microsoft.KeyVault/vaults', variables('VaultName'))]",
+    "VaultSku": "Standard"
   },
   "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('VaultName')]",
+      "apiVersion": "2015-06-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "enabledForDeployment": true,
+        "enabledForTemplateDeployment": true,
+        "enabledForVolumeEncryption": true,
+        "accessPolicies": [ ],
+        "tenantId": "[subscription().tenantid]",
+        "sku": {
+          "name": "[variables('VaultSku')]",
+          "family": "A"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('VaultName'), '/', variables('DomainSecret'))]",
+      "apiVersion": "2015-06-01",
+      "properties": {
+        "value": "[parameters('DomainSecretValue')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('VaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('VaultName'), '/', variables('ServerSecret'))]",
+      "apiVersion": "2015-06-01",
+      "properties": {
+        "value": "[parameters('ServerSecretValue')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('VaultName'))]"
+      ]
+    },
     {
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('NetworkName')]",
@@ -899,7 +963,7 @@
           "DomainPassword": {
             "reference": {
               "keyVault": {
-                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+                "id": "[variables('VaultID')]"
               },
               "secretName": "[variables('DomainSecret')]"
             }
@@ -940,7 +1004,7 @@
           "DomainPassword": {
             "reference": {
               "keyVault": {
-                "id": "[concat(variables('VaultID'), variables('VaultName'))]"
+                "id": "[variables('VaultID')]"
               },
               "secretName": "[variables('DomainSecret')]"
             }
