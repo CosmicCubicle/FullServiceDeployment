@@ -107,6 +107,12 @@
       "metadata": {
         "description": "name of AD domain"
       }
+    },
+    "AssetLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Location of Templates"
+      }
     }
   },
 
@@ -425,8 +431,7 @@
     "P10Caching": "None",
     "P20Caching": "None",
     "P30Caching": "None",
-    "AssetLocation": "https://storarmtemplates.blob.core.windows.net/dsc/",
-    "PrimaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADPDC.ps1.zip')]",
+    "PrimaryDCModulesURL": "[concat(parameters('AssetLocation'),'CreateADPDC.ps1.zip')]",
     "PrimaryDCConfigurationFunction": "createadpdc.ps1\\CreateADPDC"
   },
   "resources": [

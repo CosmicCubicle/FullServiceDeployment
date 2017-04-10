@@ -103,6 +103,7 @@
     "OSDiskSize": 127,
 
     "AssetLocation": "https://raw.githubusercontent.com/CosmicCubicle/FullServiceDeployment/master/CompanyDeployment/DSC/",
+    "TemplateURI": "https://raw.githubusercontent.com/CosmicCubicle/FullServiceDeployment/master/CompanyDeployment/Templates/",
     "PrimaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADPDC.ps1.zip')]",
     "PrimaryDCConfigurationFunction": "createadpdc.ps1\\CreateADPDC",
     "SecondaryDCModulesURL": "[concat(variables('AssetLocation'),'CreateADBDC.ps1.zip')]",
@@ -949,25 +950,19 @@
         "[resourceId('Microsoft.Network/networkInterfaces',variables('SecondaryDCNicName'))]",
         "[resourceId('Microsoft.Compute/availabilitySets', variables('AvailabilitySetName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts',variables('PrimaryDCStorage'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]"
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('PrimaryDCNicName'))]",
+        "[variables('VaultName')]"
       ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "http://storarmtemplates.blob.core.windows.net/templates/PrimaryDCVM.json",
+          "uri": "[concat(variables('TemplateURI'),'parent/PrimaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
           "Region": { "value": "[variables('Region')]" },
           "PrimaryDCNicName": { "value": "[concat(variables('PrimaryDCNicName'))]" },
-          "DomainPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "[variables('VaultID')]"
-              },
-              "secretName": "[variables('DomainSecret')]"
-            }
-          },
+          "DomainPassword": { "value": "[parameters('DomainSecretValue')]" },
           "PrimaryDCVMName": { "value": "[variables('PrimaryDCVMName')]" },
           "PrimaryDCPCName": { "value": "[variables('PrimaryDCPCName')]" },
           "MachineClass": { "value": "[parameters('MachineClass')]" },
@@ -981,7 +976,8 @@
           "AdminUserName": { "value": "[variables('AdminUserName')]" },
           "PrimaryDCStorageName": { "value": "[variables('PrimaryDCStorage')]" },
           "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
-          "DomainName": { "value": "[parameters('DomainName')]" }
+          "DomainName": { "value": "[parameters('DomainName')]" },
+          "AssetLocation": { "value": "[variables('AssetLocation')]" }
         }
       }
     },
@@ -995,20 +991,13 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "http://storarmtemplates.blob.core.windows.net/templates/SecondaryDCVM.json",
+          "uri": "[concat(variables('TemplateURI'),'parent/SecondaryDCVM.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
           "Region": { "value": "[variables('Region')]" },
           "SecondaryDCNicName": { "value": "[concat(variables('SecondaryDCNicName'))]" },
-          "DomainPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "[variables('VaultID')]"
-              },
-              "secretName": "[variables('DomainSecret')]"
-            }
-          },
+          "DomainPassword": { "value": "[parameters('DomainSecretValue')]" },
           "SecondaryDCVMName": { "value": "[variables('SecondaryDCVMName')]" },
           "SecondaryDCPCName": { "value": "[variables('SecondaryDCPCName')]" },
           "MachineClass": { "value": "[parameters('MachineClass')]" },
@@ -1022,7 +1011,8 @@
           "AdminUserName": { "value": "[variables('AdminUserName')]" },
           "SecondaryDCStorageName": { "value": "[variables('SecondaryDCStorage')]" },
           "AvailabilitySetName": { "value": "[variables('AvailabilitySetName')]" },
-          "DomainName": { "value": "[parameters('DomainName')]" }
+          "DomainName": { "value": "[parameters('DomainName')]" },
+          "AssetLocation": { "value": "[variables('AssetLocation')]" }
         }
       }
     },
