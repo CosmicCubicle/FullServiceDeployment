@@ -1039,55 +1039,37 @@
           {
             "name": "subDC",
             "properties": {
-              "addressPrefix": "[variables('DomainSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
-              }
+              "addressPrefix": "[variables('DomainSubNet')]"
             }
           },
           {
             "name": "subDMZ",
             "properties": {
-              "addressPrefix": "[variables('DMZSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('DMZSecurity'))]"
-              }
+              "addressPrefix": "[variables('DMZSubNet')]"
             }
           },
           {
             "name": "subWeb",
             "properties": {
-              "addressPrefix": "[variables('WebSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
-              }
+              "addressPrefix": "[variables('WebSubNet')]"
             }
           },
           {
             "name": "subDB",
             "properties": {
-              "addressPrefix": "[variables('DataBaseSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
-              }
+              "addressPrefix": "[variables('DataBaseSubNet')]"
             }
           },
           {
             "name": "subSearch",
             "properties": {
-              "addressPrefix": "[variables('SearchSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('InternalSecurity'))]"
-              }
+              "addressPrefix": "[variables('SearchSubNet')]"
             }
           },
           {
             "name": "subJump",
             "properties": {
-              "addressPrefix": "[variables('JumpSubNet')]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('JumpSecurity'))]"
-              }
+              "addressPrefix": "[variables('JumpSubNet')]"
             }
           },
           {
