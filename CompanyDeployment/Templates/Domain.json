@@ -753,17 +753,20 @@
     "StorageType": "Standard_LRS",
 
     "DomainSubNet": "[concat(parameters('NetworkPrefix'),'.0/28')]",
-    "DMZSubNet": "[concat(parameters('NetworkPrefix'),'.32/27')]",
-    "WebSubNet": "[concat(parameters('NetworkPrefix'),'.64/27')]",
+    "ExternalSubNet": "[concat(parameters('NetworkPrefix'),'.32/27')]",
+    "InternalSubNet": "[concat(parameters('NetworkPrefix'),'.64/27')]",
     "DataBaseSubNet": "[concat(parameters('NetworkPrefix'),'.96/27')]",
-    "SearchSubNet": "[concat(parameters('NetworkPrefix'),'.128/27')]",
     "JumpSubNet": "[concat(parameters('NetworkPrefix'),'.160/28')]",
     "GateWaySubnet": "[concat(parameters('NetworkPrefix'),'.240/28')]",
 
     "NetworkSecurityPrefix": "nsg",
-    "DMZSecurity": "[concat(variables('NetworkSecurityPrefix'),'DMZ')]",
+    "ExternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'External')]",
     "JumpSecurity": "[concat(variables('NetworkSecurityPrefix'),'Jump')]",
     "InternalSecurity": "[concat(variables('NetworkSecurityPrefix'),'Internal')]",
+    "DomainSecurity": "[concat(variables('NetworkSecurityPrefix'),'Domain')]",
+    "DBSecurity": "[concat(variables('NetworkSecurityPrefix'),'DB')]",
+    "GatewaySecurity": "[concat(variables('NetworkSecurityPrefix'),'Gateway')]",
+
 
     "AdminUserName": "[concat(parameters('CompanyID'),'admin')]",
     "VaultName": "[concat(parameters('CompanyID'),'Vault', uniqueString(resourceGroup().id))]",
@@ -831,27 +834,21 @@
             }
           },
           {
-            "name": "subDMZ",
+            "name": "subExternal",
             "properties": {
-              "addressPrefix": "[variables('DMZSubNet')]"
+              "addressPrefix": "[variables('ExternalSubNet')]"
             }
           },
           {
-            "name": "subWeb",
+            "name": "subInternal",
             "properties": {
-              "addressPrefix": "[variables('WebSubNet')]"
+              "addressPrefix": "[variables('InternalSubNet')]"
             }
           },
           {
             "name": "subDB",
             "properties": {
               "addressPrefix": "[variables('DataBaseSubNet')]"
-            }
-          },
-          {
-            "name": "subSearch",
-            "properties": {
-              "addressPrefix": "[variables('SearchSubNet')]"
             }
           },
           {
@@ -1017,7 +1014,7 @@
     },
     {
       "type": "Microsoft.Network/virtualNetworks",
-      "name": "[concat(variables('NetworkName'),'Update')]",
+      "name": "[concat(variables('NetworkName'))]",
       "apiVersion": "2016-03-30",
       "location": "[variables('Region')]",
       "dependsOn": [
@@ -1043,15 +1040,15 @@
             }
           },
           {
-            "name": "subDMZ",
+            "name": "subExternal",
             "properties": {
-              "addressPrefix": "[variables('DMZSubNet')]"
+              "addressPrefix": "[variables('ExternalSubNet')]"
             }
           },
           {
-            "name": "subWeb",
+            "name": "subInternal",
             "properties": {
-              "addressPrefix": "[variables('WebSubNet')]"
+              "addressPrefix": "[variables('InternalSubNet')]"
             }
           },
           {
@@ -1061,9 +1058,9 @@
             }
           },
           {
-            "name": "subSearch",
+            "name": "subInternal",
             "properties": {
-              "addressPrefix": "[variables('SearchSubNet')]"
+              "addressPrefix": "[variables('InternalSubNet')]"
             }
           },
           {
