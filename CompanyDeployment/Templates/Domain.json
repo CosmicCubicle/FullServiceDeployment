@@ -91,7 +91,6 @@
     "NetworkPrefix": "vnet",
     "NetworkName": "[concat(variables('NetworkPrefix'), parameters('CompanyID'))]",
     "Region": "[resourceGroup().location]",
-
     "NetworkAddressSpace": "[concat(parameters('NetworkPrefix'),'.0/24')]",
     "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('NetworkName'))]",
     "DomainID": "[concat(variables('VnetID'),'/subnets/subDC')]",
